@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منصة الاختبارات</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Tahoma,sans-serif;background:#f5f3ee;color:#222;line-height:1.7}
+header{background:#1f3a5f;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+main{max-width:720px;margin:20px auto;padding:0 14px}
+section{background:#fff;border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+h2{margin:0 0 12px;font-size:1.2rem;color:#1f3a5f}
+input,select,textarea{width:100%;padding:9px;margin:4px 0 10px;border:1px solid #cfd6df;border-radius:6px;font:inherit}
+input[type=radio],input[type=checkbox]{width:auto;margin:0 6px 0 0}
+button{background:#1f3a5f;color:#fff;border:0;border-radius:6px;padding:9px 16px;font:inherit;cursor:pointer}
+button.ghost{background:#eef2f7;color:#1f3a5f}
+button.danger{background:#b03a2e}
+.q{border-top:1px dashed #ccd;padding:12px 0}
+.muted{color:#777;font-size:.9rem}
+.ok{color:#1e7b45;font-weight:bold}
+.bad{color:#b03a2e;font-weight:bold}
+.hidden{display:none!important}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1}
+label{display:block;margin:4px 0}
+</style>
+</head>
+<body>
+<header>
+  <strong>منصة الاختبارات</strong>
+  <button class="ghost hidden" id="logoutBtn">خروج</button>
+</header>
+
+<main>
+  <!-- تسجيل الدخول -->
+  <section id="authSec">
+    <h2>تسجيل الدخول</h2>
+    <input id="email" type="email" placeholder="البريد الإلكتروني" dir="ltr">
+    <input id="password" type="password" placeholder="كلمة المرور" dir="ltr">
+    <div class="row">
+      <button id="loginBtn">دخول</button>
+      <button class="ghost" id="signupBtn">إنشاء حساب طالب</button>
+    </div>
+    <p class="muted" id="authMsg"></p>
+  </section>
+
+  <!-- لوحة المدير -->
+  <div id="adminSec" class="hidden">
+    <section>
+      <h2>المواد</h2>
+      <div class="row">
+        <input id="subjectName" placeholder="اسم المادة">
+        <button id="addSubjectBtn">إضافة مادة</button>
+      </div>
+      <div id="subjectsList"></div>
+    </section>
+
+    <section>
+      <h2>إضافة سؤال إلى بنك المادة</h2>
+      <label>المادة</label>
+      <select id="qSubject"></select>
+      <label>نوع السؤال</label>
+      <select id="qType">
+        <option value="mcq">اختيار من متعدد</option>
+        <option value="tf">صح أو خطأ</option>
+        <option value="match">ربط بين عمودين</option>
+      </select>
+      <label>نص السؤال</label>
+      <textarea id="qText" rows="2"></textarea>
+
+      <div id="mcqBox">
+        <label>الخيارات (كل خيار في سطر)</label>
+        <textarea id="qOptions" rows="4"></textarea>
+        <label>الإجابة الصحيحة (اكتبها كما هي في الخيارات)</label>
+        <input id="qAnswer">
+      </div>
+
+      <div id="tfBox" class="hidden">
+        <label>الإجابة الصحيحة</label>
+        <select id="qTf"><option value="صح">صح</option><option value="خطأ">خطأ</option></select>
+      </div>
+
+      <div id="matchBox" class="hidden">
+        <label>الأزواج (كل زوج في سطر بالشكل: اليسار | اليمين)</label>
+        <textarea id="qPairs" rows="4"></textarea>
+      </div>
+
+      <label>الحل النموذجي (يظهر للطالب بعد التسليم)</label>
+      <textarea id="qSolution" rows="2"></textarea>
+      <button id="addQBtn">حفظ السؤال</button>
+    </section>
+
+    <section>
+      <h2>إنشاء اختبار</h2>
+      <label>عنوان الاختبار</label>
+      <input id="tTitle">
+      <label>المادة</label>
+      <select id="tSubject"></select>
+      <label>اختر الأسئلة من بنك المادة</label>
+      <div id="qChecklist"></div>
+      <button id="createTestBtn">إنشاء الاختبار</button>
+    </section>
+
+    <section>
+      <h2>أكواد الطلاب</h2>
+      <label>الاختبار</label>
+      <select id="testSel"></select>
+      <div class="row">
+        <input id="sEmail" type="email" placeholder="بريد الطالب" dir="ltr">
+        <button id="genCodeBtn">توليد كود</button>
+      </div>
+      <div id="codesList"></div>
+    </section>
+  </div>
+
+  <!-- لوحة الطالب -->
+  <div id="studentSec" class="hidden">
+    <section>
+      <h2>دخول الاختبار بالكود</h2>
+      <div class="row">
+        <input id="codeIn" placeholder="أدخل الكود" dir="ltr">
+        <button id="startBtn">بدء</button>
+      </div>
+      <p class="muted" id="studentMsg"></p>
+      <div id="historyBox"></div>
+    </section>
+    <section id="testSec" class="hidden">
+      <h2 id="testTitle"></h2>
+      <div id="testBody"></div>
+      <button id="submitBtn">تسليم الاختبار</button>
+    </section>
+    <section id="resultSec" class="hidden">
+      <h2>النتيجة</h2>
+      <div id="resultBody"></div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc,addDoc,collection,getDocs,updateDoc,query,where} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ضع إعدادات مشروع Firebase هنا
+const app = initializeApp({
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  appId: "YOUR_APP_ID"
+});
+const auth = getAuth(app), db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const lines = id => $(id).value.split("\n").map(s => s.trim()).filter(Boolean);
+const randCode = () => Math.random().toString(36).slice(2, 10).toUpperCase();
+const fmtDate = t => new Date(t).toLocaleString("ar");
+
+let me = null, subjects = [], tests = [], current = null;
+
+// ---------- الدخول والأدوار ----------
+onAuthStateChanged(auth, async user => {
+  $("authSec").classList.toggle("hidden", !!user);
+  $("logoutBtn").classList.toggle("hidden", !user);
+  $("adminSec").classList.add("hidden");
+  $("studentSec").classList.add("hidden");
+  if (!user) return;
+  me = user;
+  const snap = await getDoc(doc(db, "users", user.uid));
+  if (!snap.exists()) {
+    await setDoc(doc(db, "users", user.uid), {email: user.email, role: "student"});
+  }
+  const role = snap.exists() ? snap.data().role : "student";
+  if (role === "admin") { $("adminSec").classList.remove("hidden"); loadAll(); }
+  else { $("studentSec").classList.remove("hidden"); }
+});
+
+$("loginBtn").onclick = () => auth_run(() => signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value));
+$("signupBtn").onclick = () => auth_run(() => createUserWithEmailAndPassword(auth, $("email").value.trim(), $("password").value));
+$("logoutBtn").onclick = () => signOut(auth);
+
+async function auth_run(fn) {
+  $("authMsg").textContent = "";
+  try { await fn(); }
+  catch (e) { console.error(e); $("authMsg").textContent = "تعذّر تنفيذ العملية، تحقق من البريد وكلمة المرور."; }
+}
+
+// ---------- المدير: المواد والأسئلة ----------
+async function loadAll() { await loadSubjects(); await loadTests(); }
+
+async function loadSubjects() {
+  const s = await getDocs(collection(db, "subjects"));
+  subjects = s.docs.map(d => ({id: d.id, ...d.data()}));
+  const opts = subjects.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join("");
+  $("qSubject").innerHTML = opts;
+  $("tSubject").innerHTML = opts;
+  $("subjectsList").innerHTML = subjects.map(x => `<div>• ${esc(x.name)}</div>`).join("") || `<p class="muted">لا توجد مواد بعد.</p>`;
+  loadChecklist();
+}
+
+$("addSubjectBtn").onclick = async () => {
+  const name = $("subjectName").value.trim();
+  if (!name) return;
+  await addDoc(collection(db, "subjects"), {name});
+  $("subjectName").value = "";
+  loadSubjects();
+};
+
+$("qType").onchange = () => {
+  const t = $("qType").value;
+  $("mcqBox").classList.toggle("hidden", t !== "mcq");
+  $("tfBox").classList.toggle("hidden", t !== "tf");
+  $("matchBox").classList.toggle("hidden", t !== "match");
+};
+
+$("addQBtn").onclick = async () => {
+  const type = $("qType").value, text = $("qText").value.trim(), subjectId = $("qSubject").value;
+  if (!text || !subjectId) return alert("أكمل نص السؤال واختر المادة");
+  const data = {subjectId, type, text};
+  let answer;
+  if (type === "mcq") {
+    data.options = lines("qOptions");
+    answer = $("qAnswer").value.trim();
+    if (!data.options.includes(answer)) return alert("الإجابة الصحيحة يجب أن تطابق أحد الخيارات تماماً");
+  } else if (type === "tf") {
+    answer = $("qTf").value;
+  } else {
+    const pairs = lines("qPairs").map(l => {
+      const [left, right] = l.split("|").map(x => x.trim());
+      return {left, right};
+    });
+    if (!pairs.length || pairs.some(p => !p.left || !p.right)) return alert("كل سطر يجب أن يكون: يسار | يمين");
+    data.lefts = pairs.map(p => p.left);
+    data.rightChoices = shuffle(pairs.map(p => p.right));
+    answer = pairs.map(p => p.right);
+  }
+  const ref = await addDoc(collection(db, "questions"), data);
+  // الإجابات في مجموعة منفصلة للمدير فقط
+  await setDoc(doc(db, "bankKeys", ref.id), {answer, solution: $("qSolution").value.trim()});
+  $("qText").value = ""; $("qOptions").value = ""; $("qAnswer").value = "";
+  $("qPairs").value = ""; $("qSolution").value = "";
+  alert("تمت إضافة السؤال");
+  loadChecklist();
+};
+
+async function loadChecklist() {
+  const subjectId = $("tSubject").value;
+  if (!subjectId) { $("qChecklist").innerHTML = ""; return; }
+  const s = await getDocs(query(collection(db, "questions"), where("subjectId", "==", subjectId)));
+  $("qChecklist").innerHTML = s.docs.map(d =>
+    `<label><input type="checkbox" value="${d.id}"> ${esc(d.data().text)}</label>`
+  ).join("") || `<p class="muted">لا توجد أسئلة في هذه المادة بعد.</p>`;
+}
+$("tSubject").onchange = loadChecklist;
+
+// ---------- المدير: الاختبارات والأكواد ----------
+$("createTestBtn").onclick = async () => {
+  const title = $("tTitle").value.trim(), subjectId = $("tSubject").value;
+  const ids = [...document.querySelectorAll("#qChecklist input:checked")].map(i => i.value);
+  if (!title || !ids.length) return alert("أدخل عنوان الاختبار واختر سؤالاً واحداً على الأقل");
+  const ref = await addDoc(collection(db, "tests"), {title, subjectId, questionIds: ids});
+  const items = {};
+  for (const id of ids) items[id] = (await getDoc(doc(db, "bankKeys", id))).data();
+  await setDoc(doc(db, "keys", ref.id), {items});
+  $("tTitle").value = "";
+  alert("تم إنشاء الاختبار");
+  loadTests();
+};
+
+async function loadTests() {
+  const s = await getDocs(collection(db, "tests"));
+  tests = s.docs.map(d => ({id: d.id, ...d.data()}));
+  $("testSel").innerHTML = tests.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join("");
+  loadCodes();
+}
+$("testSel").onchange = loadCodes;
+
+$("genCodeBtn").onclick = async () => {
+  const email = $("sEmail").value.trim().toLowerCase(), testId = $("testSel").value;
+  if (!email || !testId) return alert("أدخل بريد الطالب واختر الاختبار");
+  await setDoc(doc(db, "codes", randCode()), {testId, email, active: true});
+  $("sEmail").value = "";
+  loadCodes();
+};
+
+async function loadCodes() {
+  const testId = $("testSel").value;
+  if (!testId) { $("codesList").innerHTML = ""; return; }
+  const s = await getDocs(query(collection(db, "codes"), where("testId", "==", testId)));
+  const rows = await Promise.all(s.docs.map(async d => {
+    const c = d.data();
+    const a = await getDocs(query(collection(db, "attempts"), where("code", "==", d.id)));
+    return `<div class="q"><strong dir="ltr">${d.id}</strong> — ${esc(c.email)}<br>
+      <span class="muted">المحاولات: ${a.size} · ${c.active ? "فعّال" : "ملغى"}</span>
+      ${c.active ? ` <button class="danger" data-code="${d.id}">إلغاء</button>` : ""}</div>`;
+  }));
+  $("codesList").innerHTML = rows.join("") || `<p class="muted">لا توجد أكواد لهذا الاختبار.</p>`;
+}
+
+$("codesList").onclick = async e => {
+  const code = e.target.dataset.code;
+  if (!code) return;
+  await updateDoc(doc(db, "codes", code), {active: false});
+  loadCodes();
+};
+
+// ---------- الطالب ----------
+function studentMsg(t) { $("studentMsg").textContent = t; }
+
+async function loadHistory(testId) {
+  const s = await getDocs(query(collection(db, "attempts"), where("uid", "==", me.uid), where("testId", "==", testId)));
+  const list = s.docs.map(d => d.data()).sort((a, b) => b.at - a.at);
+  $("historyBox").innerHTML = list.length
+    ? `<p><strong>آخر نتيجة:</strong> ${list[0].score} من ${list[0].total}</p>
+       <div class="muted">${list.map(a => `${fmtDate(a.at)}: ${a.score} من ${a.total}`).join("<br>")}</div>`
+    : "";
+}
+
+$("startBtn").onclick = async () => {
+  const code = $("codeIn").value.trim().toUpperCase();
+  if (!code) return;
+  const cs = await getDoc(doc(db, "codes", code));
+  if (!cs.exists()) return studentMsg("الكود غير صحيح");
+  const c = cs.data();
+  if (!c.active) return studentMsg("هذا الكود ملغى");
+  if (c.email !== me.email.toLowerCase()) return studentMsg("هذا الكود مخصص لحساب آخر");
+
+  // تسجيل بدء المحاولة قبل فتح الإجابات
+  await setDoc(doc(db, "started", `${c.testId}_${me.uid}`), {testId: c.testId, uid: me.uid, code});
+  const [t, k] = await Promise.all([getDoc(doc(db, "tests", c.testId)), getDoc(doc(db, "keys", c.testId))]);
+  const test = t.data();
+  const qs = await Promise.all(test.questionIds.map(id => getDoc(doc(db, "questions", id))));
+  current = {id: c.testId, code, title: test.title, keys: k.data().items,
+             questions: qs.map(q => ({id: q.id, ...q.data()}))};
+  studentMsg("");
+  renderTest();
+  loadHistory(c.testId);
+};
+
+function renderTest() {
+  $("testSec").classList.remove("hidden");
+  $("resultSec").classList.add("hidden");
+  $("testTitle").textContent = current.title;
+  $("testBody").innerHTML = current.questions.map((q, n) => {
+    let inner = "";
+    if (q.type === "mcq") {
+      inner = q.options.map(o => `<label><input type="radio" name="${q.id}" value="${esc(o)}"> ${esc(o)}</label>`).join("");
+    } else if (q.type === "tf") {
+      inner = ["صح", "خطأ"].map(o => `<label><input type="radio" name="${q.id}" value="${o}"> ${o}</label>`).join("");
+    } else {
+      inner = q.lefts.map((l, i) => `<div class="row"><span>${esc(l)}</span>
+        <select name="m_${q.id}_${i}"><option value="">اختر</option>
+        ${q.rightChoices.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}</select></div>`).join("");
+    }
+    return `<div class="q"><strong>${n + 1}. ${esc(q.text)}</strong><div>${inner}</div></div>`;
+  }).join("");
+  window.scrollTo(0, 0);
+}
+
+$("submitBtn").onclick = async () => {
+  if (!current) return;
+  if (!confirm("هل تريد تسليم الاختبار؟")) return;
+  let score = 0;
+  const answers = {}, details = [];
+  for (const q of current.questions) {
+    const key = current.keys[q.id];
+    let ans;
+    if (q.type === "match") {
+      ans = q.lefts.map((_, i) => document.querySelector(`select[name="m_${q.id}_${i}"]`).value);
+    } else {
+      ans = document.querySelector(`input[name="${q.id}"]:checked`)?.value ?? "";
+    }
+    const ok = q.type === "match"
+      ? JSON.stringify(ans) === JSON.stringify(key.answer)
+      : ans === key.answer;
+    if (ok) score++;
+    answers[q.id] = ans;
+    details.push({text: q.text, ok, correct: key.answer, solution: key.solution});
+  }
+  const total = current.questions.length;
+  await addDoc(collection(db, "attempts"), {
+    testId: current.id, code: current.code, uid: me.uid, email: me.email,
+    score, total, answers, at: Date.now()
+  });
+  showResult(score, total, details);
+  loadHistory(current.id);
+  current = null;
+  $("testSec").classList.add("hidden");
+};
+
+function showResult(score, total, details) {
+  $("resultSec").classList.remove("hidden");
+  $("resultBody").innerHTML = `<p><strong>الدرجة: ${score} من ${total}</strong></p>` +
+    details.map((d, n) => `<div class="q">
+      <div>${n + 1}. ${esc(d.text)} — <span class="${d.ok ? "ok" : "bad"}">${d.ok ? "إجابة صحيحة" : "إجابة خاطئة"}</span></div>
+      <div class="muted">الإجابة الصحيحة: ${esc(Array.isArray(d.correct) ? d.correct.join("، ") : d.correct)}</div>
+      ${d.solution ? `<div class="muted">الحل: ${esc(d.solution)}</div>` : ""}
+    </div>`).join("");
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>
